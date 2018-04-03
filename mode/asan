@@ -1,0 +1,4 @@
+--config
+cxx.cxxflags=-lasan -g -fsanitize=address -Wall -std=c++17 -O0
+--config
+cxx.ldflags=-lasan -g -fsanitize=address -O0

@@ -1,0 +1,4 @@
+--config
+cxx.cxxflags=-g -Wall -std=c++17 -O0
+--config
+cxx.ldflags=-g -O0

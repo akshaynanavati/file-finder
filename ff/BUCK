@@ -1,0 +1,26 @@
+cxx_library(
+    name = 'ff_headers',
+    exported_headers = subdir_glob([
+        ('include/ff', '**/*.h'),
+    ]),
+    visibility = ['PUBLIC']
+)
+
+cxx_binary(
+    name = 'ff',
+    srcs = [
+        'ff.cpp',
+    ],
+    deps = [
+        ':ff_headers',
+    ],
+    compiler_flags = [
+        '-Ideps/libgflags/include',
+        '-Ldeps/libgflags/lib',
+        '-lgflags',
+    ],
+    linker_flags = [
+        '-Ldeps/libgflags/lib',
+        '-lgflags',
+    ],
+)
