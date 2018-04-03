@@ -5,9 +5,14 @@
 #include <string>
 #include <thread>
 
+#include "ff/matcher.h"
 #include "ff/queue.h"
 
 namespace ff {
+namespace detail {
+const std::vector<Matcher> blacklist = {{MatchType::Contains, "buck-out/"}};
+
+} // namespace detail
 /**
  * Asynchronously filters out paths that match a glob in the input vector. It
  * accepts any string except the emtpy string which will stop the worker and
@@ -24,7 +29,13 @@ template <class F> class Filter {
   std::atomic_size_t nFiltered_{0};
 
   // TODO
-  bool matches(const std::string &fname) { return true; }
+  bool matches(const std::string &fname) {
+    auto cb = [fname](const Matcher &matcher) {
+      return matcher.matches(fname);
+    };
+
+    return std::none_of(detail::blacklist.begin(), detail::blacklist.end(), cb);
+  }
 
   void worker() {
     while (true) {
