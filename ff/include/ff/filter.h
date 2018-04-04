@@ -5,12 +5,13 @@
 #include <string>
 #include <thread>
 
+#include "ff/filesystem.h"
 #include "ff/matcher.h"
 #include "ff/queue.h"
 
 namespace ff {
 namespace detail {
-const std::vector<Matcher> blacklist = {{MatchType::Contains, "buck-out/"}};
+const std::vector<Matcher> blacklist = {{MatchType::Contains, "buck-out"}};
 
 } // namespace detail
 /**
@@ -21,17 +22,22 @@ const std::vector<Matcher> blacklist = {{MatchType::Contains, "buck-out/"}};
  * called.
  */
 template <class F> class Filter {
-  static constexpr auto kStopFilter = "";
+  const fs::File kStopFilter = fs::File();
 
-  ts::Queue<std::string> queue_;
+  ts::Queue<fs::File> queue_;
   F cb_;
   std::thread t_;
   std::atomic_size_t nFiltered_{0};
 
   // TODO
-  bool matches(const std::string &fname) {
-    auto cb = [fname](const Matcher &matcher) {
-      return matcher.matches(fname);
+  bool matches(const fs::File &file) {
+    if (file.ft == fs::FileType::Error ||
+        file.ft == fs::FileType::PermissionDenied) {
+      return false;
+    }
+
+    auto cb = [&file](const Matcher &matcher) {
+      return matcher.matches(file.path);
     };
 
     return std::none_of(detail::blacklist.begin(), detail::blacklist.end(), cb);
@@ -39,13 +45,13 @@ template <class F> class Filter {
 
   void worker() {
     while (true) {
-      std::string pathname = queue_.pop();
-      if (pathname == kStopFilter) {
+      auto file = queue_.pop();
+      if (file.path.empty()) {
         return;
       }
 
-      if (matches(pathname)) {
-        cb_(std::move(pathname));
+      if (matches(file.path)) {
+        cb_(std::move(file));
       }
       ++nFiltered_;
     }
@@ -55,9 +61,7 @@ public:
   Filter(F &&callback) : cb_(std::move(callback)), t_(&Filter::worker, this) {}
   ~Filter() { finish(); }
 
-  template <class String> void operator()(String &&pathname) {
-    queue_.push(std::forward<String>(pathname));
-  }
+  void operator()(fs::File &&file) { queue_.push(std::move(file)); }
 
   void finish() {
     if (t_.joinable()) {

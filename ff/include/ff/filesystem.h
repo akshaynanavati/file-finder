@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <string>
 
 #include <dirent.h>
@@ -18,7 +19,11 @@ public:
   typedef struct dirent &reference;
 
   DirIt() = default;
-  DirIt(const char *path) : dir_(opendir(path)), dirent_(readdir(dir_)) {}
+  DirIt(const char *path) : dir_(opendir(path)) {
+    if (dir_) {
+      dirent_ = readdir(dir_);
+    }
+  }
 
   ~DirIt() noexcept {
     if (dir_) {
@@ -46,41 +51,60 @@ public:
 };
 } // namespace detail
 
-struct Dir {
-  const std::string path;
+enum class FileType { Dir = 0, File = 1, PermissionDenied = 2, Error = 3 };
+constexpr std::array<const char *, 4> FileTypeStrings = {
+    "Dir", "File", "PermissionDenied", "Error"};
+
+struct File {
+  std::string path;
+  FileType ft;
 
   typedef detail::DirIt iterator;
 
+  File() noexcept : path("") {}
+
   template <class String>
-  Dir(String &&path = ".") noexcept : path(std::forward<String>(path)) {}
+  File(String &&path) noexcept
+      : path(std::forward<String>(path)), ft(file_type()) {}
 
-  Dir(const Dir &) = default;
-  Dir(Dir &&) = default;
-  Dir &operator=(const Dir &) = default;
-  Dir &operator=(Dir &&) = default;
+  File(const File &) = default;
+  File(File &&) = default;
+  File &operator=(const File &) = default;
+  File &operator=(File &&) = default;
 
-  static bool is_dir(const std::string &path) {
+  FileType file_type() {
     struct stat statbuf;
 
-    if (lstat(path.c_str(), &statbuf)) {
-      return false;
+    if (stat(path.c_str(), &statbuf)) {
+      return FileType::Error;
     }
-    return S_ISDIR(statbuf.st_mode);
+
+    mode_t mode = statbuf.st_mode;
+    if ((mode & S_IRUSR) == 0) {
+      return FileType::PermissionDenied;
+    }
+
+    if (S_ISDIR(mode)) {
+      return FileType::Dir;
+    }
+
+    if (S_ISREG(mode)) {
+      return FileType::File;
+    }
+
+    return FileType::Error;
+  }
+
+  File operator/(const char *suffix) {
+    if (path.back() == '/') {
+      return File(path + suffix);
+    }
+    return File(path + "/" + suffix);
   }
 
   iterator begin() { return detail::DirIt(path.c_str()); }
 
   iterator end() { return detail::DirIt(); }
 };
-
-bool is_file(const std::string &path) {
-  struct stat statbuf;
-
-  if (lstat(path.c_str(), &statbuf)) {
-    return false;
-  }
-
-  return S_ISREG(statbuf.st_mode);
-}
 } // namespace fs
 } // namespace ff

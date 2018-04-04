@@ -25,7 +25,6 @@ public:
       return std::search(s.begin(), s.end(), s_.begin(), s_.end()) != s.end();
     }
     case MatchType::EndsWith: {
-      std::cout << "Matching " << s << " to " << s_ << std::endl;
       return std::equal(s.end() - n, s.end() + n, s_.begin());
     }
     }

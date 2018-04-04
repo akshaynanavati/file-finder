@@ -1,3 +1,11 @@
+prebuilt_cxx_library(
+  name = 'pthread',
+  header_only = True,
+  exported_linker_flags = [
+    '-lpthread',
+  ],
+)
+
 cxx_library(
     name = 'ff_headers',
     exported_headers = subdir_glob([
@@ -13,6 +21,7 @@ cxx_binary(
     ],
     deps = [
         ':ff_headers',
+        ':pthread',
     ],
     compiler_flags = [
         '-Ideps/libgflags/include',

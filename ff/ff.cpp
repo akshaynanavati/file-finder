@@ -5,7 +5,9 @@
 #include "ff/filter.h"
 #include "ff/queue.h"
 
+#ifdef ff_GFLAGS
 #include "gflags/gflags.h"
+#endif
 
 using namespace ff;
 
@@ -13,7 +15,9 @@ using namespace ff;
 #define ff_MINOR_VERSION "0";
 #define ff_PATCH_VERSION "0";
 
+#ifdef ff_GFLAGS
 DEFINE_bool(all, false, "Show all results");
+#endif
 
 constexpr auto kDot = '.';
 
@@ -43,36 +47,49 @@ bool isDotDir(const char *dir) {
     if (cur == '.') {
       ++dots;
     }
-  } while (cur && i < 2);
+  } while (cur && i < 3);
 
-  return !cur || dots > 0;
+  return !cur && dots > 0;
 }
 
 int main(int argc, char *argv[]) {
+#ifdef ff_GFLAGS
   gflags::SetUsageMessage(buildUsageString(argv[0]));
   gflags::SetVersionString(buildVersionString());
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+#endif
 
   std::string dirs(argc > 1 ? argv[1] : ".");
-  if (!fs::Dir::is_dir(dirs)) {
+  auto dir = fs::File(std::move(dirs));
+  if (dir.ft != fs::FileType::Dir) {
     std::cerr << "Invalid directory: " << dirs << std::endl;
+#ifdef ff_GFLAGS
     gflags::ShowUsageWithFlagsRestrict(argv[0], "ff");
+#else
+    std::cerr << "USAGE: " << argv[0] << " <dir>" << std::endl;
+#endif
     return 1;
   }
 
-  ts::Queue<std::string> toVisit;
-  toVisit.push(std::move(dirs));
+  ts::Queue<fs::File> toVisit;
+  toVisit.push(std::move(dir));
 
-  Filter filter([&toVisit](std::string &&pathname) {
-    if (fs::Dir::is_dir(pathname)) {
-      toVisit.push(std::move(pathname));
-    } else {
-      std::cout << pathname << '\n';
+  Filter filter([&toVisit](fs::File &&file) {
+    switch (file.ft) {
+    case fs::FileType::Dir: {
+      toVisit.push(std::move(file));
+      break;
+    }
+    case fs::FileType::File: {
+      std::cout << file.path << '\n';
+      break;
+    }
+    default: { throw std::runtime_error("Impossible to reach"); }
     }
   });
 
   size_t processed = 0;
-  std::string parent;
+  fs::File parent;
   while (1) {
     while (!toVisit.try_pop(parent)) {
       if (processed == filter.nFiltered()) {
@@ -80,10 +97,9 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    fs::Dir dir(parent);
-    for (const auto &f : dir) {
+    for (const auto &f : parent) {
       if (!isDotDir(f.d_name)) {
-        filter(parent + "/" + f.d_name);
+        filter(parent / f.d_name);
         ++processed;
       }
     }
