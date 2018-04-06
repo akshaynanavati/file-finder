@@ -8,7 +8,7 @@ root and another that
 My primary motivation for building this was to be able to use it with [fzf](https://github.com/junegunn/fzf).
 Specifically, with large projects, I wanted to limit the number of files to search through with fzf in vim.
 
-# Instalation
+# Installation
 There are no required dependencies. Currently it can be compiled simply with:
 
 `g++-7 -std=c++17 -O3 -Iff/include/ ff/ff.cpp`
