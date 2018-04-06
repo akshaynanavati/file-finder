@@ -25,11 +25,5 @@ cxx_binary(
     ],
     compiler_flags = [
         '-Ideps/libgflags/include',
-        '-Ldeps/libgflags/lib',
-        '-lgflags',
-    ],
-    linker_flags = [
-        '-Ldeps/libgflags/lib',
-        '-lgflags',
     ],
 )
