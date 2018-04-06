@@ -4,6 +4,7 @@
 #include "ff/filesystem.h"
 #include "ff/filter.h"
 #include "ff/queue.h"
+#include "ff/util.h"
 
 #ifdef ff_GFLAGS
 #include "gflags/gflags.h"
@@ -60,7 +61,7 @@ int main(int argc, char *argv[]) {
 #endif
 
   std::string dirs(argc > 1 ? argv[1] : ".");
-  auto dir = fs::File(std::move(dirs));
+  auto dir = fs::File(std::move(dirs), -1);
   if (dir.ft != fs::FileType::Dir) {
     std::cerr << "Invalid directory: " << dirs << std::endl;
 #ifdef ff_GFLAGS
@@ -72,22 +73,24 @@ int main(int argc, char *argv[]) {
   }
 
   ts::Queue<fs::File> toVisit;
+
+  Filter filter(
+      [&toVisit](fs::File &&file) {
+        switch (file.ft) {
+        case fs::FileType::Dir: {
+          toVisit.push(std::move(file));
+          break;
+        }
+        case fs::FileType::File: {
+          std::cout << file.path << '\n';
+          break;
+        }
+        default: { ff_UNREACHABLE(); }
+        }
+      },
+      dir);
+
   toVisit.push(std::move(dir));
-
-  Filter filter([&toVisit](fs::File &&file) {
-    switch (file.ft) {
-    case fs::FileType::Dir: {
-      toVisit.push(std::move(file));
-      break;
-    }
-    case fs::FileType::File: {
-      std::cout << file.path << '\n';
-      break;
-    }
-    default: { throw std::runtime_error("Impossible to reach"); }
-    }
-  });
-
   size_t processed = 0;
   fs::File parent;
   while (1) {

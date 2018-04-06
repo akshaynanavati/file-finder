@@ -57,6 +57,7 @@ constexpr std::array<const char *, 4> FileTypeStrings = {
 
 struct File {
   std::string path;
+  ssize_t lastSlashIdx = -1;
   FileType ft;
 
   typedef detail::DirIt iterator;
@@ -64,8 +65,9 @@ struct File {
   File() noexcept : path("") {}
 
   template <class String>
-  File(String &&path) noexcept
-      : path(std::forward<String>(path)), ft(file_type()) {}
+  File(String &&path, ssize_t lastSlashIdxP) noexcept
+      : path(std::forward<String>(path)), lastSlashIdx(lastSlashIdxP),
+        ft(file_type()) {}
 
   File(const File &) = default;
   File(File &&) = default;
@@ -95,11 +97,11 @@ struct File {
     return FileType::Error;
   }
 
-  File operator/(const char *suffix) {
+  File operator/(const char *suffix) const {
     if (path.back() == '/') {
-      return File(path + suffix);
+      return File(path + suffix, path.length() - 1);
     }
-    return File(path + "/" + suffix);
+    return File(path + "/" + suffix, path.length());
   }
 
   iterator begin() { return detail::DirIt(path.c_str()); }

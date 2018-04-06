@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 #include <queue>
 #include <string>
 #include <thread>
@@ -10,10 +11,6 @@
 #include "ff/queue.h"
 
 namespace ff {
-namespace detail {
-const std::vector<Matcher> blacklist = {{MatchType::Contains, "buck-out"}};
-
-} // namespace detail
 /**
  * Asynchronously filters out paths that match a glob in the input vector. It
  * accepts any string except the emtpy string which will stop the worker and
@@ -28,19 +25,15 @@ template <class F> class Filter {
   F cb_;
   std::thread t_;
   std::atomic_size_t nFiltered_{0};
+  std::unique_ptr<Matcher> toIgnore_;
 
-  // TODO
-  bool matches(const fs::File &file) {
+  bool shouldProcess(const fs::File &file) {
     if (file.ft == fs::FileType::Error ||
         file.ft == fs::FileType::PermissionDenied) {
       return false;
     }
 
-    auto cb = [&file](const Matcher &matcher) {
-      return matcher.matches(file.path);
-    };
-
-    return std::none_of(detail::blacklist.begin(), detail::blacklist.end(), cb);
+    return !toIgnore_->matches(file);
   }
 
   void worker() {
@@ -50,7 +43,7 @@ template <class F> class Filter {
         return;
       }
 
-      if (matches(file.path)) {
+      if (shouldProcess(file)) {
         cb_(std::move(file));
       }
       ++nFiltered_;
@@ -58,7 +51,9 @@ template <class F> class Filter {
   }
 
 public:
-  Filter(F &&callback) : cb_(std::move(callback)), t_(&Filter::worker, this) {}
+  Filter(F &&callback, const fs::File &dir)
+      : cb_(std::move(callback)), t_(&Filter::worker, this),
+        toIgnore_(createMatcher(dir)) {}
   ~Filter() { finish(); }
 
   void operator()(fs::File &&file) { queue_.push(std::move(file)); }
