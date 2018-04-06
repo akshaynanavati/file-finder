@@ -23,7 +23,7 @@ This is also a [buck](https://buckbuild.com/) project. You can install and use b
 [gflags](https://github.com/gflags/gflags) is an optional dependency if you want support for flags,
 but right now there are no implemented flags.
 
-# TODOS (links to Github issue)
+# TODOS (links to Github issues)
 - [Use cmake](https://github.com/akshaynanavati/file-finder/issues/1)
 - [Use std::filesystem](https://github.com/akshaynanavati/file-finder/issues/2)
 - [Add option for a $HOME/.ffrc](https://github.com/akshaynanavati/file-finder/issues/3)
