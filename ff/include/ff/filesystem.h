@@ -9,6 +9,13 @@
 namespace ff {
 namespace fs {
 namespace detail {
+/**
+ * An iterator over a directory. If path does not point to a valid
+ * directory, this is equivalent to the end iterator i.e. incrementing and
+ * dereferencing are undefined.
+ *
+ * This class should never actually be accessed except as File::iterator.
+ */
 class DirIt {
   DIR *dir_ = nullptr;
   struct dirent *dirent_ = nullptr;
@@ -55,9 +62,13 @@ enum class FileType { Dir = 0, File = 1, PermissionDenied = 2, Error = 3 };
 constexpr std::array<const char *, 4> FileTypeStrings = {
     "Dir", "File", "PermissionDenied", "Error"};
 
+/**
+ * Represents a file on the file system. If path is a dir, the files underneath
+ * it can be iterated through.
+ */
 struct File {
   std::string path;
-  ssize_t lastSlashIdx = -1;
+  ssize_t lastSlashIdx = -1; // Position of last slash in path
   FileType ft;
 
   typedef detail::DirIt iterator;
@@ -97,6 +108,9 @@ struct File {
     return FileType::Error;
   }
 
+  /**
+   * Concatenates two File paths with a separator (/).
+   */
   File operator/(const char *suffix) const {
     if (path.back() == '/') {
       return File(path + suffix, path.length() - 1);

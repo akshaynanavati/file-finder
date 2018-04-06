@@ -12,7 +12,7 @@
 
 namespace ff {
 /**
- * Asynchronously filters out paths that match a glob in the input vector. It
+ * Asynchronously filters out paths that match the provided Matcher. It
  * accepts any string except the emtpy string which will stop the worker and
  * therefore should not be passed. Filter::finish should be called to stop the
  * filter worker. The Filter is safe to destruct even if finish has not been

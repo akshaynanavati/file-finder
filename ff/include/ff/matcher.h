@@ -25,6 +25,9 @@ public:
   virtual bool matches(const fs::File &file) const { return false; }
 };
 
+/**
+ * Matches based on a gitignore file.
+ */
 class GitMatcher : public Matcher {
   enum class GitMatchType { Dir, Glob, RelGlob };
   struct GitPattern {
@@ -56,6 +59,9 @@ public:
     patterns_.emplace_back(gitignoreRoot_, ".git/");
   }
 
+  /**
+   * Accept patterns from a gitignore file, line by line.
+   */
   void addPattern(std::string &&line) override {
     patterns_.push_back(GitPattern(gitignoreRoot_, std::move(line)));
   }
@@ -87,6 +93,9 @@ public:
   }
 }; // namespace ff
 
+/**
+ * Returns true if it matches any of the regexes added via addPattern.
+ */
 class RegexMatcher : public Matcher {
   std::vector<std::regex> patterns_;
 

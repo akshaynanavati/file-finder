@@ -11,10 +11,6 @@ namespace ts {
  * Single producer single consumer thread safe queue with a max size of N.
  * Implemented as a circular buffer with a head_ and tail_ pointer. Items are
  * popped off the head_ and pushed to the tail_.
- *
- * This could probably be written lock-free with atomics if lock contention
- * turns out to be a bottleneck. But the condition variable functinoality is
- * nice to have and that requires a lock.
  */
 template <class T, size_t N = 4096> class Queue {
   std::atomic_size_t head_ = 0;
