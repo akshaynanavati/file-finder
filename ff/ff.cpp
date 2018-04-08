@@ -72,13 +72,13 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  ts::Queue<fs::File> toVisit;
+  ts::Queue<fs::File> filtered;
 
   Filter filter(
-      [&toVisit](fs::File &&file) {
+      [&filtered](fs::File &&file) {
         switch (file.ft) {
         case fs::FileType::Dir: {
-          toVisit.push(std::move(file));
+          filtered.push(std::move(file));
           break;
         }
         case fs::FileType::File: {
@@ -90,21 +90,35 @@ int main(int argc, char *argv[]) {
       },
       dir);
 
-  toVisit.push(std::move(dir));
+  filtered.push(std::move(dir));
   size_t processed = 0;
-  fs::File parent;
+  std::vector<fs::File::iterator> toVisit;
   while (1) {
-    while (!toVisit.try_pop(parent)) {
-      if (processed == filter.nFiltered()) {
-        return 0;
+    if (!toVisit.empty() && !filter.full()) {
+      auto &next = toVisit.back();
+      if (!next) {
+        toVisit.pop_back();
+        continue;
       }
-    }
 
-    for (const auto &f : parent) {
-      if (!isDotDir(f.d_name)) {
-        filter(parent / f.d_name);
+      if (!isDotDir(next->d_name)) {
+        // Must succeed as filter was checked to not be full
+        filter(fs::File::concat(next.parentPath, next->d_name));
         ++processed;
       }
+      ++next;
+    }
+
+    if (filtered.empty()) {
+      // Need to check empty again. If filter.nFiltered was incremented, this
+      // could be non-empty and a memory fence between nFiltered being
+      // incremented and the queue internals guarantees it will be udpated here.
+      if (toVisit.empty() && processed == filter.nFiltered() &&
+          filtered.empty()) {
+        return 0;
+      }
+    } else {
+      toVisit.push_back(filtered.pop().begin());
     }
   }
 

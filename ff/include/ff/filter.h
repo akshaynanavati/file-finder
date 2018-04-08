@@ -58,6 +58,8 @@ public:
 
   void operator()(fs::File &&file) { queue_.push(std::move(file)); }
 
+  bool full() { return queue_.full(); }
+
   void finish() {
     if (t_.joinable()) {
       queue_.push(kStopFilter);

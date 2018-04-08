@@ -54,6 +54,22 @@ public:
     buf_[tail] = std::forward<T_>(item);
     tail_.store((tail + 1) % N);
   }
+
+  /**
+   * Non-blocking push. If the push succeeds and true is returned, item is
+   * moved and should not be used. If this function returns false, the item
+   * is unchanged.
+   */
+  bool try_push(T &item) {
+    if (full()) {
+      return false;
+    }
+
+    auto tail = tail_.load();
+    buf_[tail] = std::move(item);
+    tail_.store((tail + 1) % N);
+    return true;
+  }
 };
 } // namespace ts
 } // namespace ff
