@@ -58,7 +58,7 @@ Vagrant.configure("2") do |config|
     apt-get update
     apt-get -y upgrade
     apt-get -y dist-upgrade
-    add-apt-repository ppa:jonathonf/gcc-7.1
+    add-apt-repository ppa:jonathonf/gcc-7.3
     apt-get update
     apt-get install -y autoconf automake build-essential python-dev libssl-dev libtool pkg-config cmake
     apt-get -y install gcc-7 g++-7 git gdb valgrind
