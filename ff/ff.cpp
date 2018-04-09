@@ -53,6 +53,35 @@ bool isDotDir(const char *dir) {
   return !cur && dots > 0;
 }
 
+int allResults(fs::File &&dir) {
+  std::vector<fs::File> toVisit;
+  toVisit.push_back(std::move(dir));
+
+  while (!toVisit.empty()) {
+    auto file = std::move(toVisit.back());
+    toVisit.pop_back();
+
+    switch (file.ft) {
+    case fs::FileType::Dir: {
+      for (const auto &child : file) {
+        if (isDotDir(child.d_name)) {
+          continue;
+        }
+
+        toVisit.push_back(file / child.d_name);
+      }
+      break;
+    }
+    case fs::FileType::File: {
+      std::cout << file.path << '\n';
+      break;
+    }
+    default: { continue; }
+    }
+  }
+  return 0;
+}
+
 int main(int argc, char *argv[]) {
 #ifdef ff_GFLAGS
   gflags::SetUsageMessage(buildUsageString(argv[0]));
@@ -71,6 +100,12 @@ int main(int argc, char *argv[]) {
 #endif
     return 1;
   }
+
+#ifdef ff_GFLAGS
+  if (FLAGS_all) {
+    return allResults(std::move(dir));
+  }
+#endif
 
   ts::Queue<fs::File> filtered;
 
@@ -112,7 +147,8 @@ int main(int argc, char *argv[]) {
     if (filtered.empty()) {
       // Need to check empty again. If filter.nFiltered was incremented, this
       // could be non-empty and a memory fence between nFiltered being
-      // incremented and the queue internals guarantees it will be udpated here.
+      // incremented and the queue internals guarantees it will be udpated
+      // here.
       if (toVisit.empty() && processed == filter.nFiltered() &&
           filtered.empty()) {
         return 0;
